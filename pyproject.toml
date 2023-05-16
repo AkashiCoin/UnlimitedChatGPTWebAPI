@@ -1,0 +1,19 @@
+[project]
+name = "UnlimitedChatGPTWebAPI"
+version = "0.1.0"
+description = "Unlimited ChatGPT WebAPI"
+authors = [
+    {name = "AkashiCoin", email = "l1040186796@gmail.com"},
+]
+license = {text = "MIT"}
+dependencies = ["playwright>=1.28.0", "pydantic>=1.9.0", "loguru>=0.6.0"]
+requires-python = ">=3.8"
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/AkashiCoin/UnlimitedChatGPTWebAPI"
+Repository = "https://github.com/AkashiCoin/UnlimitedChatGPTWebAPI"
+
+[build-system]
+requires = [ "setuptools", "wheel" ]
+build-backend = "setuptools.build_meta"
