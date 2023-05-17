@@ -78,13 +78,13 @@ class StreamResponse:
             raise StreamResponseException("Cannot read, response is None")
         return bytes(arrayBuffer)
 
-    async def json(self):
-        """Read response payload and decode as json."""
-        return json.loads(await self.text())
-
     async def text(self, encoding="utf-8"):
         """Read response payload and decode."""
         return (await self.read()).decode(encoding=encoding)
+
+    async def json(self):
+        """Read response payload and decode as json."""
+        return json.loads(await self.text())
 
     async def stop(self):
         """Stop the response stream."""

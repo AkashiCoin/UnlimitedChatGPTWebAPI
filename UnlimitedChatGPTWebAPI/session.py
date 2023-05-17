@@ -45,7 +45,7 @@ class ChatSession:
         self.timeout = timeout
         self.content: BrowserContext = None
         self.browser: Browser = None
-        self.playwright: PlaywrightContextManager = async_playwright()
+        self.playwright: PlaywrightContextManager = None
         self.cf_clearance: str = ""
         self.page: Page = None
         self.available = False
@@ -68,14 +68,14 @@ class ChatSession:
 
     async def playwright_start(self):
         """Start Playwright Browser and Context, called when start"""
+        self.playwright: PlaywrightContextManager = async_playwright()
         playwright = await self.playwright.start()
-        if not self.browser:
-            self.browser = await playwright.chromium.launch(
-                headless=True,
-                proxy={"server": self.proxies}
-                if self.proxies
-                else None,  # your proxy
-            )
+        self.browser = await playwright.chromium.launch(
+            headless=True,
+            proxy={"server": self.proxies}
+            if self.proxies
+            else None,  # your proxy
+        )
         ua = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/{self.browser.version}"
         # ua = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{self.browser.version} Safari/537.36"
         self.content = await self.browser.new_context(user_agent=ua)
@@ -118,7 +118,7 @@ class ChatSession:
             self.cookie_manager.delete_cf_clearance(self.cf_clearance)
             await self.wait_for_task()
             await self.page.close()
-            await self.content.close()
+            await self.playwright_close()
         await self.playwright_start()
         page = await self.content.new_page()
         self.page = page
