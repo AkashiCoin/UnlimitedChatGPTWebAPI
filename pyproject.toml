@@ -1,6 +1,6 @@
 [project]
 name = "UnlimitedChatGPTWebAPI"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unlimited ChatGPT WebAPI"
 authors = [
     {name = "AkashiCoin", email = "l1040186796@gmail.com"},
