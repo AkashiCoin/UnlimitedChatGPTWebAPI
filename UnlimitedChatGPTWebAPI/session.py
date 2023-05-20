@@ -17,7 +17,7 @@ from playwright.async_api import (
     Browser,
     PlaywrightContextManager,
 )
-from playwright._impl._api_types import Error
+from playwright._impl._api_types import Error as PlaywrightError
 
 from .data import CookieManager, StreamResponse
 
@@ -76,6 +76,7 @@ class ChatSession:
             if self.proxies
             else None,  # your proxy
         )
+        # ua = None
         ua = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/{self.browser.version}"
         # ua = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{self.browser.version} Safari/537.36"
         self.content = await self.browser.new_context(user_agent=ua)
@@ -128,8 +129,10 @@ class ChatSession:
         await page.expose_function("get_cookie", self.get_cookie)
         return page
 
-    async def get_cf_cookies(self, retry: int = 20) -> None:
+    async def get_cf_cookies(self, retry: int = 20, wait: bool = False) -> None:
         await self.set_status(False)
+        if wait:
+            await self.wait_for_task()
         logger.debug("Start get Cloudflare cookies")
         await self.content.add_cookies(
             [
@@ -180,6 +183,7 @@ class ChatSession:
 
     async def wait_for_task(self, timeout: int = 60):
         """Wait for task, called when restart"""
+        logger.debug("Wait for task...")
         await self.set_status(False)
         await self.page.evaluate(
             "([timeout]) => waitForNoFetch(timeout)", [timeout * 1000]
@@ -246,7 +250,7 @@ class ChatSession:
                     logger.warning(
                         "Cloudflare cookies had expired, trying to get new Cloudflare cookies..."
                     )
-                    asyncio.ensure_future(self.get_cf_cookies())
+                    asyncio.ensure_future(self.get_cf_cookies(wait=True))
                 elif response.status == 429 and "/api/auth/session" in url:
                     logger.warning(
                         "Too many session requests, trying to get new Cloudflare cookies..."
@@ -262,12 +266,11 @@ class ChatSession:
                             "set-cookie"
                         ] = f"{SESSION_TOKEN_KEY}={token}; path=/; max-age=31536000; secure; httponly"
                 yield response
-        except Error as e:
+        except PlaywrightError as e:
             logger.error(f"Playwright Error: {e.message}")
             yield StreamResponse(status=403)
-        except Exception as e:
-            logger.opt(exception=e).error("Call API failed")
-            yield response
+        # except Exception as e:
+        #     logger.opt(exception=e).error("Call API failed")
 
 
 class SessionManager:
@@ -290,7 +293,7 @@ class SessionManager:
         return [
             session
             for session in self.sessions
-            if await session.get_status() and not session.running
+            if (await session.get_status() and not session.running)
         ]
 
     async def get_session(self):
@@ -331,14 +334,14 @@ class SessionManager:
             method, url, headers, data=data, session_token=session_token
         ) as resp:
             if resp.status == 403:
-                if first:
-                    # Retry once
-                    async with self.call_api(
-                        method, url, headers, data, session_token, False
-                    ) as resp:
-                        yield resp
-                else:
+                if not first:
                     resp.status = 499
                     yield resp
             else:
+                yield resp
+        if resp.status == 403 and first:
+            # Retry once
+            async with self.call_api(
+                method, url, headers, data, session_token, False
+            ) as resp:
                 yield resp
