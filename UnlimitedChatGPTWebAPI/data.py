@@ -169,20 +169,21 @@ class CookieManager(BaseModel):
         """Return a random cf_clearance"""
         if not self.cf_clearances:
             return ""
-        cf_clearance = random.choice(list(self.cf_clearances.keys()))
-        if cf_clearance := self.get_cf_clearance(cf_clearance=cf_clearance):
+        cf_id = random.choice(list(self.cf_clearances.keys()))
+        if cf_clearance := self.get_cf_clearance(cf_id=cf_id):
             return cf_clearance
         return self.cf_clearance
 
-    def get_cf_clearance(self, cf_clearance):
-        if cf_clearance not in self.cf_clearances:
+    def get_cf_clearance(self, cf_id):
+        """Get a cf_clearance"""
+        if cf_id not in self.cf_clearances:
             return None
 
-        cf_clearance_info = self.cf_clearances[cf_clearance]
+        cf_clearance_info = self.cf_clearances[cf_id]
         expires = cf_clearance_info.get("expires")
 
         if expires is not None and expires < time.time():
-            del self.cf_clearances[cf_clearance]
+            del self.cf_clearances[cf_id]
             return None
 
         return cf_clearance_info.get("cf_clearance")
@@ -199,10 +200,13 @@ class CookieManager(BaseModel):
             self.save()
 
     def delete_cf_clearance(self, cf_clearance: str) -> bool:
-        if cf_clearance in self.cf_clearances:
-            del self.cf_clearances[cf_clearance]
-            self.save()
-            return True
+        """Delete a cf_clearance"""
+        if cf_clearance:
+            [cf_id, expires, _, _, _, _] = cf_clearance.split("-")
+            if cf_id in self.cf_clearances:
+                del self.cf_clearances[cf_id]
+                self.save()
+                return True
         return False
 
     @root_validator(pre=True)
